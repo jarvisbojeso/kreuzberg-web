@@ -10,10 +10,10 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Get Kreuzberg binary from official image
-FROM ghcr.io/goldziher/kreuzberg:latest AS kreuzberg
+FROM ghcr.io/kreuzberg-dev/kreuzberg:latest AS kreuzberg
 
 # Stage 3: Production runtime
-FROM python:3.12-slim
+FROM debian:bookworm-slim
 
 # Install Node.js and dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,13 +23,14 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-eng \
     poppler-utils \
     libmagic1 \
+    ca-certificates \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Kreuzberg binary from official image
-COPY --from=kreuzberg /usr/local/bin/kreuzberg /usr/local/bin/kreuzberg
+COPY --from=kreuzberg /kreuzberg /usr/local/bin/kreuzberg
 RUN chmod +x /usr/local/bin/kreuzberg
 
 # Copy Next.js standalone build
