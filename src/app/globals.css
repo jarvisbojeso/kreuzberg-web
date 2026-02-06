@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Markdown styling */
+.markdown-preview {
+  @apply prose prose-invert max-w-none;
+}
+
+.markdown-preview h1 { @apply text-2xl font-bold mt-6 mb-4; }
+.markdown-preview h2 { @apply text-xl font-bold mt-5 mb-3; }
+.markdown-preview h3 { @apply text-lg font-semibold mt-4 mb-2; }
+.markdown-preview p { @apply my-3; }
+.markdown-preview ul { @apply list-disc pl-6 my-3; }
+.markdown-preview ol { @apply list-decimal pl-6 my-3; }
+.markdown-preview li { @apply my-1; }
+.markdown-preview table { @apply border-collapse w-full my-4; }
+.markdown-preview th, .markdown-preview td { @apply border border-gray-600 px-3 py-2; }
+.markdown-preview th { @apply bg-gray-800 font-semibold; }
+.markdown-preview code { @apply bg-gray-800 px-1.5 py-0.5 rounded text-sm; }
+.markdown-preview pre { @apply bg-gray-800 p-4 rounded-lg overflow-x-auto my-4; }
+.markdown-preview pre code { @apply bg-transparent p-0; }
+.markdown-preview blockquote { @apply border-l-4 border-gray-600 pl-4 italic my-4; }
