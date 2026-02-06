@@ -28,13 +28,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Kreuzberg
-RUN pip install --no-cache-dir kreuzberg[tesseract]
+RUN pip install --no-cache-dir kreuzberg
 
 # Copy Next.js standalone build
 WORKDIR /app
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public 2>/dev/null || true
+COPY --from=builder /app/public ./public
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
