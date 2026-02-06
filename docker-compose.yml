@@ -1,29 +1,24 @@
 services:
-  # All-in-one container (use this for simple deployments)
-  kreuzberg-web:
+  frontend:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      - KREUZBERG_URL=http://kreuzberg:8000
+    depends_on:
+      kreuzberg:
+        condition: service_healthy
     restart: unless-stopped
 
-  # --- Alternative: Separate services for development ---
-  # frontend:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.dev
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - KREUZBERG_URL=http://kreuzberg:8000
-  #   depends_on:
-  #     - kreuzberg
-  #   volumes:
-  #     - ./src:/app/src
-  #
-  # kreuzberg:
-  #   image: ghcr.io/goldziher/kreuzberg:latest
-  #   command: serve -H 0.0.0.0 -p 8000
-  #   ports:
-  #     - "8000:8000"
+  kreuzberg:
+    image: ghcr.io/kreuzberg-dev/kreuzberg:latest
+    command: serve -H 0.0.0.0 -p 8000
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped

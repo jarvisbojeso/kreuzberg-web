@@ -9,63 +9,19 @@ RUN npm ci || npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Get Kreuzberg binary from official image
-FROM ghcr.io/kreuzberg-dev/kreuzberg:latest AS kreuzberg
+# Stage 2: Production runtime (frontend only)
+FROM node:20-alpine
 
-# Stage 3: Production runtime
-FROM debian:bookworm-slim
-
-# Install Node.js and dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    tesseract-ocr \
-    tesseract-ocr-dan \
-    tesseract-ocr-eng \
-    poppler-utils \
-    libmagic1 \
-    ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Kreuzberg binary from official image
-COPY --from=kreuzberg /kreuzberg /usr/local/bin/kreuzberg
-RUN chmod +x /usr/local/bin/kreuzberg
-
-# Copy Next.js standalone build
 WORKDIR /app
+
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Create startup script
-RUN printf '#!/bin/bash\n\
-set -e\n\
-echo "Starting Kreuzberg API server..."\n\
-/usr/local/bin/kreuzberg serve -H 0.0.0.0 -p 8000 &\n\
-KREUZBERG_PID=$!\n\
-\n\
-echo "Waiting for Kreuzberg..."\n\
-for i in $(seq 1 30); do\n\
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then\n\
-        echo "Kreuzberg ready!"\n\
-        break\n\
-    fi\n\
-    sleep 1\n\
-done\n\
-\n\
-echo "Starting Next.js server..."\n\
-KREUZBERG_URL=http://localhost:8000 node server.js &\n\
-NEXT_PID=$!\n\
-\n\
-trap "kill $KREUZBERG_PID $NEXT_PID 2>/dev/null" EXIT\n\
-wait\n' > /start.sh && chmod +x /start.sh
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV KREUZBERG_URL="http://localhost:8000"
+ENV KREUZBERG_URL="http://kreuzberg:8000"
 
 EXPOSE 3000
 
-CMD ["/start.sh"]
+CMD ["node", "server.js"]
