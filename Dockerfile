@@ -3,18 +3,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci || npm install
 
-# Copy source and build
 COPY . .
 RUN npm run build
 
-# Stage 2: Production runtime with Kreuzberg
+# Stage 2: Get Kreuzberg binary from official image
+FROM ghcr.io/goldziher/kreuzberg:latest AS kreuzberg
+
+# Stage 3: Production runtime
 FROM python:3.12-slim
 
-# Install Node.js for Next.js runtime
+# Install Node.js and dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     tesseract-ocr \
@@ -27,8 +28,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Kreuzberg
-RUN pip install --no-cache-dir kreuzberg
+# Copy Kreuzberg binary from official image
+COPY --from=kreuzberg /usr/local/bin/kreuzberg /usr/local/bin/kreuzberg
+RUN chmod +x /usr/local/bin/kreuzberg
 
 # Copy Next.js standalone build
 WORKDIR /app
@@ -37,13 +39,12 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
 # Create startup script
-RUN echo '#!/bin/bash\n\
+RUN printf '#!/bin/bash\n\
 set -e\n\
 echo "Starting Kreuzberg API server..."\n\
-kreuzberg serve -H 0.0.0.0 -p 8000 &\n\
+/usr/local/bin/kreuzberg serve -H 0.0.0.0 -p 8000 &\n\
 KREUZBERG_PID=$!\n\
 \n\
-# Wait for Kreuzberg to be ready\n\
 echo "Waiting for Kreuzberg..."\n\
 for i in $(seq 1 30); do\n\
     if curl -s http://localhost:8000/health > /dev/null 2>&1; then\n\
@@ -57,7 +58,6 @@ echo "Starting Next.js server..."\n\
 KREUZBERG_URL=http://localhost:8000 node server.js &\n\
 NEXT_PID=$!\n\
 \n\
-# Handle shutdown\n\
 trap "kill $KREUZBERG_PID $NEXT_PID 2>/dev/null" EXIT\n\
 wait\n' > /start.sh && chmod +x /start.sh
 
